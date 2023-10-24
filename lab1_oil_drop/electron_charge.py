@@ -84,22 +84,24 @@ def linearFunc(x,slope):
     return y
 def plot_discrete_e(charges,names, charge_err):
     charges_sort = np.asarray(sorted(charges))
+    charge_err_sort = np.reshape(np.asarray([charge_err[np.where(charges==q)] for q in charges_sort]),charge_err.shape)
     x = np.arange(1, len(charges_sort)+1)
     plt.scatter(x,charges_sort,s=30)
-    for i, txt in enumerate(charges_sort):
-        plt.annotate(names[np.where(charges==txt)], (x[i], charges_sort[i]),fontsize=8)
+    for i, q in enumerate(charges_sort):
+        plt.annotate(names[np.where(charges==q)], (x[i], charges_sort[i]),fontsize=8)
     ns_interp = np.linspace(1, len(charges_sort)+1, 50)
-    a, cov = curve_fit(linearFunc, x, charges_sort, sigma=charge_err, absolute_sigma=True)
+    a, cov = curve_fit(linearFunc, x, charges_sort, sigma=charge_err_sort, absolute_sigma=True)
     d_slope = np.sqrt(cov[0][0])
     #a,_,_,_ = np.linalg.lstsq(x[:,np.newaxis],charges_sort)
     qs_interp = a[0]*ns_interp
     plt.plot(ns_interp,qs_interp,'-',label = fr'slope:{a[0]:.2E} $\pm$ {d_slope:.2E}',color='r')
-    plt.errorbar(x,charges_sort,yerr= charge_err,fmt='o', markersize=8,ecolor = 'b',label = 'error bar in charge',capsize=5)
+    plt.errorbar(x,charges_sort,yerr= charge_err_sort,fmt='o', markersize=8,ecolor = 'b',label = 'error bar in charge',capsize=5)
     plt.xlabel('# of electrons (assumption)')
     plt.ylabel('Charge/drop [Coulombs]')
     plt.grid()
     plt.legend()
     plt.show()
+    print(f'Charge of electron: {a[0]} +/- {d_slope} C')
 
 charges, radius, names, charge_err, radius_err = compile_data("lab2_data.xlsx")
 plot_hisogram(charges)
