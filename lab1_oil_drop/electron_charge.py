@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from scipy import interpolate
+from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
 plt.rcParams.update({'font.size': 14})
 from IPython import embed
@@ -60,6 +61,8 @@ def compile_data(file_name):
     V_data = np.array(data_excel['V'].tolist())
     eta_data = calc_eta(np.array(data_excel['resistance'].tolist()))
     names = np.array(data_excel['id'].tolist())
+    charge_err = np.array(data_excel['q_err'].tolist())
+    radius_err = np.array(data_excel['a_err'].tolist())
     charges = []
     radius = []
 
@@ -69,31 +72,36 @@ def compile_data(file_name):
     charges = np.asarray(charges)
     radius = np.asarray(radius)
 
-    return charges, radius, names
+    return charges, radius, names, charge_err, radius_err
 
 def plot_hisogram(charges):
     plt.hist(charges,bins = np.linspace(charges.min(),charges.max(),100))
+    plt.xlabel('Charge/drop [Coulombs]')
+    plt.title('Charge distribution of droplets')
     plt.show()
-
-def plot_discrete_e(charges,names):
+def linearFunc(x,slope):
+    y = slope * x
+    return y
+def plot_discrete_e(charges,names, charge_err):
     charges_sort = np.asarray(sorted(charges))
     x = np.arange(1, len(charges_sort)+1)
-    plt.plot(x,charges_sort,'.')
-    for i, txt in enumerate(names):
-        plt.annotate(txt, (x[i], charges_sort[i]))
+    plt.scatter(x,charges_sort,s=30)
+    for i, txt in enumerate(charges_sort):
+        plt.annotate(names[np.where(charges==txt)], (x[i], charges_sort[i]),fontsize=8)
     ns_interp = np.linspace(1, len(charges_sort)+1, 50)
-    x_new = x[:,np.newaxis]
-    a,_,_,_ = np.linalg.lstsq(x_new,charges_sort)
-    #a, b = np.polyfit(x,charges_sort,1)
-    qs_interp = a*ns_interp
-    plt.plot(ns_interp,qs_interp,'-',label = f'slope:{a}')
+    a, cov = curve_fit(linearFunc, x, charges_sort, sigma=charge_err, absolute_sigma=True)
+    d_slope = np.sqrt(cov[0][0])
+    #a,_,_,_ = np.linalg.lstsq(x[:,np.newaxis],charges_sort)
+    qs_interp = a[0]*ns_interp
+    plt.plot(ns_interp,qs_interp,'-',label = fr'slope:{a[0]:.2E} $\pm$ {d_slope:.2E}',color='r')
+    plt.errorbar(x,charges_sort,yerr= charge_err,fmt='o', markersize=8,ecolor = 'b',label = 'error bar in charge',capsize=5)
     plt.xlabel('# of electrons (assumption)')
-    plt.ylabel('Charges/drop [Coulombs]')
+    plt.ylabel('Charge/drop [Coulombs]')
     plt.grid()
     plt.legend()
     plt.show()
 
-charges, radius, names = compile_data("lab2_data.xlsx")
+charges, radius, names, charge_err, radius_err = compile_data("lab2_data.xlsx")
 plot_hisogram(charges)
-plot_discrete_e(charges,names)
+plot_discrete_e(charges,names, charge_err)
 embed()
