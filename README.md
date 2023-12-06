@@ -1,3 +1,3 @@
 # 128AL
-##Linda Jin
+## Linda Jin
 Phys 128AL lab codes fall 2023
